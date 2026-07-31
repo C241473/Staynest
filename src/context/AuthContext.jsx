@@ -272,6 +272,9 @@ export const AuthProvider = ({ children }) => {
           const data = await apiRequest("/api/auth/verify", {
             method: "POST",
             body: { role },
+            headers: {
+              Authorization: `Bearer ${firebaseToken}`,
+            },
           });
 
           window.localStorage.setItem("staynestToken", firebaseToken);
