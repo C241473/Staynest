@@ -23,13 +23,12 @@ const requiredFirebaseConfig = [
 
 export const firebaseReady = requiredFirebaseConfig.every(Boolean);
 
-let app = null;
+const app = firebaseReady ? initializeApp(firebaseConfig) : null;
 let auth = null;
 let db = null;
 
 try {
-  if (firebaseReady) {
-    app = initializeApp(firebaseConfig);
+  if (app) {
     auth = getAuth(app);
     db = getFirestore(app);
   }
@@ -37,4 +36,4 @@ try {
   console.warn("Firebase initialization failed:", err.message);
 }
 
-export { auth, db };
+export { auth, db, app };

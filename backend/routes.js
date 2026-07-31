@@ -2,9 +2,12 @@ import express from "express";
 import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 import { getDb } from "./db.js";
 import fs from "fs";
 import admin from "firebase-admin";
+
+dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET || "staynest-secret";
 const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID || "steynest-auth";
@@ -394,6 +397,35 @@ router.get("/app-data", async (_req, res) => {
   ]);
 
   return res.json({ users, bookings, hostels, notifications, loginActivity });
+});
+
+router.get("/notifications", async (_req, res) => {
+  const db = getDb();
+  const notifications = await db.collection("notifications").find().sort({ createdAt: -1 }).toArray();
+  return res.json({ notifications });
+});
+
+router.post("/notifications", verifyToken, async (req, res) => {
+  const notification = req.body || {};
+  const message = String(notification.message || "").trim();
+  const userEmail = String(notification.userEmail || "").trim();
+
+  if (!message || !userEmail) {
+    return res.status(400).json({ error: "Notification message and user email are required." });
+  }
+
+  const db = getDb();
+  const nextNotification = {
+    id: notification.id || createId(),
+    userEmail,
+    message,
+    time: notification.time || new Date().toLocaleTimeString(),
+    createdAt: notification.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  await db.collection("notifications").insertOne(nextNotification);
+  return res.status(201).json({ notification: nextNotification });
 });
 
 router.post("/contact", async (req, res) => {

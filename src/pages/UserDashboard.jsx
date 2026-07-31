@@ -50,7 +50,17 @@ const PAYMENT_METHODS = [
 function UserDashboard() {
   const navigate = useNavigate();
   const { user, logout, bookings, addBooking, hostels } = useAuth();
-  const userBookings = user ? bookings.filter((booking) => booking.userId === user.id) : [];
+  const userBookings = useMemo(() => {
+    if (!user || !Array.isArray(bookings)) return [];
+
+    return bookings.filter(
+      (booking) =>
+        booking.userId === user.id ||
+        booking.userEmail === user.email ||
+        booking.email === user.email ||
+        booking.userName === user.name
+    );
+  }, [bookings, user]);
 
   // Booking modal state
   const [showBookingModal, setShowBookingModal] = useState(false);

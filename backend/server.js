@@ -1,7 +1,10 @@
+import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import apiRouter, { initDefaultData } from "./routes.js";
 import { connectDb } from "./db.js";
+
+dotenv.config();
 
 const PORT = Number(process.env.PORT || process.env.BACKEND_PORT || 5050);
 const app = express();
@@ -45,14 +48,42 @@ app.use((error, req, res, next) => {
   res.status(500).json({ error: "Server error." });
 });
 
+const startServerWithFallback = async (preferredPort) => {
+  const maxAttempts = 10;
+
+  for (let port = preferredPort; port < preferredPort + maxAttempts; port += 1) {
+    const server = await new Promise((resolve, reject) => {
+      const candidate = app.listen(port, () => {
+        resolve({ port, server: candidate });
+      });
+
+      candidate.on("error", (error) => {
+        if (error.code === "EADDRINUSE") {
+          resolve({ port: null, server: null });
+          return;
+        }
+
+        reject(error);
+      });
+    });
+
+    if (server && server.port) {
+      return server;
+    }
+  }
+
+  throw new Error(`No free port found starting from ${preferredPort}.`);
+};
+
 connectDb()
   .then(async () => {
     await initDefaultData();
-    app.listen(PORT, () => {
-      console.log(`StayNest backend running at http://localhost:${PORT}`);
-    });
+    const serverState = await startServerWithFallback(PORT);
+    const actualPort = serverState.port;
+    process.env.BACKEND_PORT = String(actualPort);
+    console.log(`StayNest backend running at http://localhost:${actualPort}`);
   })
   .catch((error) => {
-    console.error("Failed to connect to MongoDB.", error);
+    console.error("Failed to connect to MongoDB or start the server.", error);
     process.exit(1);
   });

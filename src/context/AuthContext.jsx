@@ -117,11 +117,9 @@ export const AuthProvider = ({ children }) => {
   const [signupError, setSignupError] = useState("");
   const [loginActivity, setLoginActivity] = useState(() => readStorage("staynestActivity", []));
   const [bookings, setBookings] = useState(() => readStorage("staynestBookings", []));
+  const [notifications, setNotifications] = useState(() => readStorage("staynestNotifications", []));
   const [hostels, setHostels] = useState(() =>
     readStorage("staynestHostels", DEFAULT_HOSTELS).map(normalizeHostel)
-  );
-  const [globalNotifications, setGlobalNotifications] = useState(() =>
-    readStorage("staynestNotifications", [])
   );
 
   const addLoginActivity = useCallback((activity) => {
@@ -144,8 +142,8 @@ export const AuthProvider = ({ children }) => {
       });
     });
     setBookings(data.bookings || []);
+    setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
     setHostels((data.hostels?.length ? data.hostels : DEFAULT_HOSTELS).map(normalizeHostel));
-    setGlobalNotifications(data.notifications || []);
   }, []);
 
   const loadAppData = useCallback(async () => {
@@ -155,6 +153,9 @@ export const AuthProvider = ({ children }) => {
   }, [applyAppData]);
 
   useEffect(() => {
+    const savedUser = readStorage("staynestUser", null);
+    if (!savedUser) return;
+
     const loadTimer = window.setTimeout(() => {
       loadAppData().catch((error) => {
         console.warn("App data load failed:", error.message);
@@ -162,7 +163,7 @@ export const AuthProvider = ({ children }) => {
     }, 0);
 
     return () => window.clearTimeout(loadTimer);
-  }, [loadAppData]);
+  }, [user?.id, user?.email, loadAppData]);
 
   // Keep `user` state in sync with Firebase auth profile updates (displayName/email)
   useEffect(() => {
@@ -243,12 +244,12 @@ export const AuthProvider = ({ children }) => {
   }, [bookings]);
 
   useEffect(() => {
-    window.localStorage.setItem("staynestHostels", JSON.stringify(hostels));
-  }, [hostels]);
+    window.localStorage.setItem("staynestNotifications", JSON.stringify(notifications));
+  }, [notifications]);
 
   useEffect(() => {
-    window.localStorage.setItem("staynestNotifications", JSON.stringify(globalNotifications));
-  }, [globalNotifications]);
+    window.localStorage.setItem("staynestHostels", JSON.stringify(hostels));
+  }, [hostels]);
 
   const refreshServerData = async () => {
     try {
@@ -563,14 +564,23 @@ export const AuthProvider = ({ children }) => {
     });
   };
 
-  const addGlobalNotification = (userEmail, message) => {
-    const newNotification = {
-      id: Date.now() + Math.random(),
-      userEmail,
-      message,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  const addNotification = (notification) => {
+    const nextNotification = {
+      ...notification,
+      id: notification.id || `notification_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      time: notification.time || new Date().toLocaleTimeString(),
+      createdAt: notification.createdAt || new Date().toISOString(),
+      updatedAt: notification.updatedAt || new Date().toISOString(),
     };
-    setGlobalNotifications((prevNotifs) => [newNotification, ...prevNotifs]);
+
+    setNotifications((prev) => [nextNotification, ...prev]);
+
+    apiRequest("/api/notifications", {
+      method: "POST",
+      body: nextNotification,
+    }).catch((error) => {
+      console.warn("Notification save failed:", error.message);
+    });
   };
 
   return (
@@ -591,6 +601,9 @@ export const AuthProvider = ({ children }) => {
         setLoginActivity,
         bookings,
         setBookings,
+        notifications,
+        setNotifications,
+        addNotification,
         addBooking,
         updateBookingStatus,
         hostels,
@@ -598,9 +611,6 @@ export const AuthProvider = ({ children }) => {
         updateHostelRooms,
         updateHostel,
         deleteHostel,
-        globalNotifications,
-        setGlobalNotifications,
-        addGlobalNotification,
         refreshServerData,
       }}
     >

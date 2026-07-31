@@ -133,6 +133,8 @@ function AdminDashboard() {
     loginActivity,
     setLoginActivity,
     bookings,
+    notifications,
+    addNotification,
     updateBookingStatus,
     hostels,
     addHostel,
@@ -192,7 +194,6 @@ function AdminDashboard() {
   };
 
   const [transactions, setTransactions] = useState([]);
-  const [notifications, setNotifications] = useState([]);
   const [newUser, setNewUser] = useState({ name: "", email: "", role: "user" });
   const [newHostel, setNewHostel] = useState({
     name: "",
@@ -482,7 +483,7 @@ function AdminDashboard() {
         message: `✅ Your booking request for ${targetBooking.room || targetBooking.hostel} has been approved! Room allocated.`,
         time: notificationTime
       };
-      setNotifications([newNotification, ...notifications]);
+      addNotification(newNotification);
       alert("Booking Request Approved & Room Allocated Successfully!");
     } else if (action === "Blocked" || action === "Rejected") {
       setTransactions(prevTxns => [
@@ -502,7 +503,7 @@ function AdminDashboard() {
         message: `❌ Your booking for ${targetBooking.room || targetBooking.hostel} was rejected. 💳 ৳ ${targetBooking.price} has been automatically refunded.`,
         time: notificationTime
       };
-      setNotifications([newNotification, ...notifications]);
+      addNotification(newNotification);
       alert(`Booking Rejected! ৳ ${targetBooking.price} has been refunded.`);
     }
   };
