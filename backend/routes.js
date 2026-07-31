@@ -399,6 +399,32 @@ router.get("/app-data", async (_req, res) => {
   return res.json({ users, bookings, hostels, notifications, loginActivity });
 });
 
+router.get("/login-activity", async (_req, res) => {
+  const db = getDb();
+  const loginActivity = await db.collection("loginActivity").find().sort({ createdAt: -1 }).toArray();
+  return res.json({ loginActivity });
+});
+
+router.post("/login-activity", async (req, res) => {
+  const activity = req.body || {};
+  const db = getDb();
+
+  const nextActivity = {
+    id: activity.id || createId(),
+    userName: String(activity.userName || "Unknown").trim(),
+    email: String(activity.email || "").trim().toLowerCase(),
+    role: String(activity.role || "user").trim().toLowerCase(),
+    action: String(activity.action || "Login").trim(),
+    timestamp: activity.timestamp || new Date().toLocaleString(),
+    status: activity.status || "Active",
+    createdAt: activity.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  await db.collection("loginActivity").insertOne(nextActivity);
+  return res.status(201).json({ activity: nextActivity });
+});
+
 router.get("/notifications", async (_req, res) => {
   const db = getDb();
   const notifications = await db.collection("notifications").find().sort({ createdAt: -1 }).toArray();

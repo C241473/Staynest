@@ -122,8 +122,28 @@ export const AuthProvider = ({ children }) => {
     readStorage("staynestHostels", DEFAULT_HOSTELS).map(normalizeHostel)
   );
 
-  const addLoginActivity = useCallback((activity) => {
-    setLoginActivity((prev) => [activity, ...prev]);
+  const addLoginActivity = useCallback(async (activity) => {
+    const normalized = {
+      ...activity,
+      id: activity.id || `activity_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      userName: activity.userName || "Unknown",
+      email: String(activity.email || "").trim().toLowerCase(),
+      role: activity.role || "user",
+      action: activity.action || "Login",
+      timestamp: activity.timestamp || new Date().toLocaleString(),
+      status: activity.status || "Active",
+    };
+
+    setLoginActivity((prev) => [normalized, ...prev]);
+
+    try {
+      await apiRequest("/api/login-activity", {
+        method: "POST",
+        body: normalized,
+      });
+    } catch (error) {
+      console.warn("Login activity save failed:", error.message);
+    }
   }, []);
 
   const authPrevUid = useRef(null);

@@ -131,7 +131,7 @@ function AdminDashboard() {
     user,
     logout,
     loginActivity,
-    setLoginActivity,
+    addLoginActivity,
     bookings,
     notifications,
     addNotification,
@@ -229,7 +229,7 @@ function AdminDashboard() {
       status: "Active",
     };
 
-    setLoginActivity((prev) => [createdUser, ...prev]);
+    addLoginActivity(createdUser);
     setNewUser({ name: "", email: "", role: "user" });
     setActiveSection("users");
     alert("User added successfully and activity recorded.");
